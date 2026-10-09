@@ -60,11 +60,17 @@ cargo install aegis-mcp
 ```
 *(Homebrew and standalone precompiled binaries for macOS/Linux/Windows are also available in Releases)*
 
-### 2. Auto-Wrap Your AI Clients (1-Click Zero Friction)
+### 2. Auto-Wrap Your AI Clients (1-Click Universal Support)
 
 ```bash
-# Automatically discovers Claude Desktop, Cursor, and Windsurf configs,
-# safely backs them up (*.aegis_bak), and inserts Aegis transparent proxy:
+# Automatically discovers and wraps configs for:
+# - Google Antigravity & Antigravity IDE
+# - DeepSeek Harness & Codex CLI
+# - Cursor & Windsurf
+# - Claude Desktop & Claude Code CLI
+# - VS Code Extensions (Cline, Roo Code, Continue.dev)
+# - Zed Editor, Tongyi Lingma, Qoder, WorkBuddy
+# - Workspace-level `.mcp.json` / `mcp_config.json`
 aegis wrap
 ```
 

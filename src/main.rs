@@ -14,7 +14,7 @@ use proxy::StdioProxy;
 use serde_json::json;
 use std::path::PathBuf;
 use std::time::Instant;
-use wrapper::ConfigWrapper;
+use wrapper::{ConfigWrapper, DiscoveredClient};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,14 +45,17 @@ async fn main() -> Result<()> {
 fn handle_wrap(custom_path: Option<String>, dry_run: bool) -> Result<()> {
     println!("{}", "🛡️ Aegis-MCP: Scanning for installed MCP configurations...".bold().cyan());
 
-    let paths: Vec<PathBuf> = if let Some(p) = custom_path {
-        vec![PathBuf::from(p)]
+    let clients: Vec<DiscoveredClient> = if let Some(p) = custom_path {
+        vec![DiscoveredClient {
+            client_name: "Custom Path",
+            path: PathBuf::from(p),
+        }]
     } else {
-        ConfigWrapper::discover_config_paths()
+        ConfigWrapper::discover_clients()
     };
 
-    if paths.is_empty() {
-        println!("{}", "ℹ️ No supported client configs detected. Supported: Claude Desktop, Cursor, Windsurf.".yellow());
+    if clients.is_empty() {
+        println!("{}", "ℹ️ No MCP configurations detected. Supported: Antigravity, Claude, Cursor, Windsurf, Codex, DeepSeek, Cline, Roo Code, Continue, Lingma, Qoder, WorkBuddy, etc.".yellow());
         return Ok(());
     }
 
@@ -62,24 +65,34 @@ fn handle_wrap(custom_path: Option<String>, dry_run: bool) -> Result<()> {
 
     let mut total_wrapped = 0;
 
-    for path in &paths {
+    for client in &clients {
         if dry_run {
-            println!("  {} Found config at {:?}", "[DRY-RUN]".bright_black(), path);
+            println!("  {} Found [{}] at {:?}", "[DRY-RUN]".bright_black(), client.client_name.cyan(), client.path);
             continue;
         }
 
-        match ConfigWrapper::wrap_file(path, &current_exe) {
+        match ConfigWrapper::wrap_file(&client.path, &current_exe) {
             Ok(count) => {
-                println!(
-                    "  {} Wrapped {} server(s) in {:?}",
-                    "✔".bold().green(),
-                    count.to_string().bold().green(),
-                    path
-                );
-                total_wrapped += count;
+                if count > 0 {
+                    println!(
+                        "  {} Wrapped {} server(s) in [{}] {:?}",
+                        "✔".bold().green(),
+                        count.to_string().bold().green(),
+                        client.client_name.cyan(),
+                        client.path
+                    );
+                    total_wrapped += count;
+                } else {
+                    println!(
+                        "  {} [{}] already protected or no local servers: {:?}",
+                        "ℹ".bright_black(),
+                        client.client_name.cyan(),
+                        client.path
+                    );
+                }
             }
             Err(e) => {
-                eprintln!("  {} Failed to wrap {:?}: {}", "✖".bold().red(), path, e);
+                eprintln!("  {} Failed to wrap [{}] {:?}: {}", "✖".bold().red(), client.client_name, client.path, e);
             }
         }
     }
@@ -99,22 +112,25 @@ fn handle_wrap(custom_path: Option<String>, dry_run: bool) -> Result<()> {
 fn handle_unwrap(custom_path: Option<String>) -> Result<()> {
     println!("{}", "🔄 Aegis-MCP: Restoring original MCP configurations...".bold().cyan());
 
-    let paths: Vec<PathBuf> = if let Some(p) = custom_path {
-        vec![PathBuf::from(p)]
+    let clients: Vec<DiscoveredClient> = if let Some(p) = custom_path {
+        vec![DiscoveredClient {
+            client_name: "Custom Path",
+            path: PathBuf::from(p),
+        }]
     } else {
-        ConfigWrapper::discover_config_paths()
+        ConfigWrapper::discover_clients()
     };
 
-    for path in &paths {
-        match ConfigWrapper::unwrap_file(path) {
+    for client in &clients {
+        match ConfigWrapper::unwrap_file(&client.path) {
             Ok(true) => {
-                println!("  {} Restored from backup: {:?}", "✔".bold().green(), path);
+                println!("  {} Restored [{}] from backup: {:?}", "✔".bold().green(), client.client_name.cyan(), client.path);
             }
             Ok(false) => {
-                println!("  {} No backup found for {:?}", "ℹ".bright_black(), path);
+                println!("  {} No backup found for [{}]: {:?}", "ℹ".bright_black(), client.client_name.cyan(), client.path);
             }
             Err(e) => {
-                eprintln!("  {} Failed to restore {:?}: {}", "✖".bold().red(), path, e);
+                eprintln!("  {} Failed to restore [{}] {:?}: {}", "✖".bold().red(), client.client_name, client.path, e);
             }
         }
     }
